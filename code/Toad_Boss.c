@@ -19,6 +19,8 @@ typedef struct {
     z64_skelanime_t skelanime;
     uint32_t path_id;
     vec3f_t next_dest;
+    int y_vel;
+    int count;
     int current_node;
     u32* pathlist;
     float last_diff;
@@ -87,8 +89,8 @@ static void init(entity_t *en, z64_global_t *gl)
     en->actor.vel_1.x = (math_sins(en->actor.xz_dir) * en->actor.xz_speed);
     en->actor.vel_1.z = (math_coss(en->actor.xz_dir) * en->actor.xz_speed);
     en->actor.mass = 0xF0;
-   
-    skelanime_init_mtx(gl, &en->skelanime, SKL_DEFAULT, ANIM_TOADACTION, 0, 0, 0);
+    en->count = 0;
+    //skelanime_init_mtx(gl, &en->skelanime, SKL_DEFAULT, ANIM_TOADACTION, 0, 0, 0);
 
 }
 
@@ -98,7 +100,6 @@ static void play(entity_t *en, z64_global_t *gl)
     uint32_t *l = (uint32_t *)GLOBAL_SCENE_FRAME;
     actor_collider_cylinder_update(&en->actor, &en->Collision);
 	external_func_8002E4B4(gl, &en->actor, 50.0f, 10.0f, 100.0f, 5); //extern void external_func_8002E4B4(z64_global_t *global, z64_actor_t *actor, f32 below, f32 radius, f32 above, u32 flags);
-
 
     if (en->current_node != en->num_nodes - 1)
     {
@@ -112,22 +113,35 @@ static void play(entity_t *en, z64_global_t *gl)
         en->actor.rot_2.y = en->actor.xz_dir;
 
         //Sets movement speed
-        en->actor.xz_speed = 2;
-       
+        en->actor.xz_speed = 3;
+
+        
 
         //Function to move in direction (0x32) at set velocity (0x68)
         //a0 = pointer to start address of actor instance
         external_func_8002D8E0(&en->actor);
+            
+        //en->actor.vel_1.y = external_func_80078068(&en->actor.pos_2, &en->next_dest); 
 
-        if(en->actor.vel_1.y > en->actor.min_vel_y)
-        {
-            en->actor.vel_1.y = ABS(math_vec3f_distance(&en->actor.pos_2, &en->next_dest)) * en->actor.xz_speed;
-        }
+        //vel_1.y -.5f 
+        //actor_update_pos(&en->actor);
         
-        if (en->actor.vel_1.y > en->actor.min_vel_y)
+        //en->count += 1;
+        en->actor.vel_1.y = 1;
+
+        while(en->actor.vel_1.y < 10 && en->count < 10)
         {
-            en->actor.vel_1.y += en->actor.gravity;
+            en->actor.vel_1.y += 1;
+            sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
+            en->count += 1;
+        }      
+        while(en->actor.vel_1.y >= 10) // if velocety is higher than or equal to 10
+        {  
+            en->actor.vel_1.y = 0; //Sets Velocety to 0
+            sound_play_actor(&en->actor, NA_SE_EV_LIGHTNING);
+            en->count += 1;
         }
+        //actor_update_pos(&en->actor);
 
         float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
 
@@ -148,7 +162,7 @@ static void play(entity_t *en, z64_global_t *gl)
     actor_collision_check_set_ac(gl,AADDR(gl, 0x011E60), &en->Collision);
 	actor_collision_check_set_at(gl,AADDR(gl, 0x011E60), &en->Collision);
     actor_collision_check_set_ot(gl, (u32*)(AADDR(gl,0x11e60)), &en->Collision);
-   
+    en->count += 1;
 }
  
 static void draw(entity_t *en, z64_global_t *gl)
