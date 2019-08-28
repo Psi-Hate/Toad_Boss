@@ -1,8 +1,7 @@
 #include <z64ovl/oot/debug.h>
-#include <z64ovl/oot/types.h>
-#include <z64ovl/oot/helpers.h>
+#include<z64ovl/oot/helpers.h>
 #include <z64ovl/oot/sfx.h>
- 
+  
 #define TOAD_HEALTH   3  
 #define ACT_ID 0x0082
 #define OBJ_ID 0x0086

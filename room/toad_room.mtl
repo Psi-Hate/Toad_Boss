@@ -1,0 +1,28 @@
+#
+## Alias OBJ Material File
+# Exported from SketchUp, (c) 2000-2012 Trimble Navigation Limited
+
+newmtl _27
+Ka 0.000000 0.000000 0.000000
+Kd 0.627451 0.603922 0.552941
+Ks 0.330000 0.330000 0.330000
+map_Kd toad_room/_27.png
+
+newmtl _25
+Ka 0.000000 0.000000 0.000000
+Kd 0.462745 0.443137 0.415686
+Ks 0.330000 0.330000 0.330000
+map_Kd toad_room/_25.png
+
+newmtl _
+Ka 0.000000 0.000000 0.000000
+Kd 0.313725 0.325490 0.250980
+Ks 0.330000 0.330000 0.330000
+map_Kd toad_room/_.png
+
+newmtl _30
+Ka 0.000000 0.000000 0.000000
+Kd 0.317647 0.290196 0.376471
+Ks 0.330000 0.330000 0.330000
+map_Kd toad_room/_30.png
+
