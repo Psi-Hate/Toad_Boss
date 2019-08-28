@@ -10,15 +10,8 @@
  
 /* Display Lists * * * */
      #define   DL_TOAD     0x060027B8
- 
-/* Animations * * * */
-     #define   ANIM_TOADACTION     0x06003178
- 
-/* Hierarchies (Skeletons) * * * */
-     #define   SKL_DEFAULT     0x06003270
- 
-/* Base Offset: 0x06000000 */
- 
+
+
 typedef struct {
     z64_actor_t actor;
     z64_actor_t dist_from_link_xz;
