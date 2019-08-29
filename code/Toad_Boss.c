@@ -24,7 +24,10 @@ typedef struct {
     float last_diff;
     u8 num_nodes;
     bool touching_ground;
- 
+    vec3f_t curPos;
+    vec3f_t destPos;
+    float jumpTime;
+    bool isJumping;
    
 } entity_t;
  
@@ -67,6 +70,10 @@ void get_next_dest(entity_t *en, z64_global_t *gl)
 /*** functions ***/
 static void init(entity_t *en, z64_global_t *gl)
 {
+    //adds  gravity
+	en->actor.pos_2.y -=10;
+    
+    en->isJumping = false;
     actor_collider_cylinder_init(gl, &en->Collision, &en->actor, &Collision);
     actor_set_scale(&en->actor, 0.01f);
     actor_set_height(&en->actor, 10);
@@ -84,11 +91,68 @@ static void init(entity_t *en, z64_global_t *gl)
     en->num_nodes = get_number_of_nodes_from_path(get_path_address(en->pathlist, en->path_id));
     get_next_dest(en, gl);
    
-    en->actor.vel_1.y = 5;
     en->actor.mass = 0xF0;
     en->count = 0;
     //skelanime_init_mtx(gl, &en->skelanime, SKL_DEFAULT, ANIM_TOADACTION, 0, 0, 0);
 
+}
+
+void HandleJump(entity_t *en, z64_global_t *gl) 
+{
+    if (en->isJumping) {
+        en->jumpTime += (1.0f / 20.0f);
+        float delta = en->jumpTime;
+
+        if (delta < 1.0f)
+        {
+            // Parabola code!
+            float time = delta;
+            float ptime = time * 2 - 1;
+
+            // Multiply for temp vectors
+            vec3f_t tdest = en->destPos;
+            tdest.x = (tdest.x - en->curPos.x) * time;
+            tdest.y = (tdest.y - en->curPos.y) * time;
+            tdest.z = (tdest.z - en->curPos.z) * time;
+            vec3f_t tcur = en->curPos;
+            tcur.x += tdest.x;
+            tcur.y += tdest.y;
+            tcur.z += tdest.z;
+
+            tcur.y += (-ptime * ptime + 1) * 300;
+            en->actor.pos_2 = tcur;
+        }
+        else if (delta >= 1.0f)
+        {
+            // Reset timer
+            en->jumpTime = 0.0f;
+
+            // Prevent desync.
+            en->actor.pos_2 = en->destPos;
+
+            en->isJumping = false;
+        }
+    }
+    else 
+    {
+        if((en->actor.bgcheck_flags & 0xB) || (en->Collision.body.flags_2 & 2)) 
+        {
+            en->actor.xz_speed = 100;
+            get_next_dest(en, gl);
+            en->actor.rot_2.y = external_func_80078068(&en->actor.pos_2, &en->next_dest);
+            en->curPos = en->actor.pos_2;
+            en->destPos = en->next_dest;
+            en->isJumping = true;
+            sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
+        }
+        else {
+            en->actor.xz_speed = 0;
+            sound_play_actor(&en->actor, NA_SE_EV_EXPLOSION);
+            en->actor.gravity = -5;
+            en->actor.pos_2.y = 5;
+            external_func_8002D8E0(&en->actor);
+        }
+    }
 }
 
 static void play(entity_t *en, z64_global_t *gl)
@@ -98,105 +162,25 @@ static void play(entity_t *en, z64_global_t *gl)
     actor_collider_cylinder_update(&en->actor, &en->Collision);
 	external_func_8002E4B4(gl, &en->actor, 50.0f, 10.0f, 100.0f, 5); //extern void external_func_8002E4B4(z64_global_t *global, z64_actor_t *actor, f32 below, f32 radius, f32 above, u32 flags);
 
-    if (en->current_node != en->num_nodes - 1)
+    HandleJump(en,gl);
+
+    float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
+        
+
+    if(diff < en->actor.xz_speed)
     {
-        get_next_dest(en, gl);
- 
-        //Calculates Arctan2 (X,Z) of two coordinates (A-B)
-        //A0 = Coord A ptr | A1 = Coord B ptr | V0 = s16 rotation
-        //Gets and sets the direction
-        en->actor.xz_dir = external_func_80078068(&en->actor.pos_2, &en->next_dest);  
-        
-        en->actor.rot_2.y = en->actor.xz_dir;
-
-        //Sets movement speed
-        
-
-        //Function to move in direction (0x32) at set velocity (0x68)
-        //a0 = pointer to start address of actor instance
-        
-
-                // if on ground, jump
-        if((en->actor.bgcheck_flags & 0xB)|| (en->Collision.body.flags_2 & 2)) {
-            sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
-
-            // get destination without height accounted
-            vec3f_t dest = en->next_dest;
-            dest.y = en->actor.pos_2.y;
-
-            // calculate distance and speed
-            float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
-            float time = 20 * 2; // 2 seconds;
-            float hSpeed = (distance / time);
-
-            if (distance < 1) {
-                // We are on the destination, reset it to exact
-                // so we can continue the journey!
-                // Stop moving horizontally
-                en->actor.xz_speed = 0;
-                en->actor.vel_1.y = 0;
-                en->actor.gravity = 0;  
-                en->actor.pos_2 = en->next_dest;
-            }
-            else {
-                // We got places to go, calculate the journey!
-                en->actor.xz_speed = hSpeed;
-                en->actor.vel_1.y = hSpeed;
-                en->actor.gravity = -(hSpeed) / time;              
-            }
-        }
-        else
-        {
-            // get destination without height accounted
-            vec3f_t dest = en->next_dest;
-            dest.y = en->actor.pos_2.y;
-
-            // calculate distance and speed
-            float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
-
-            if (distance < 1) {
-                // recalculate destination based on height
-                dest = en->actor.pos_2;
-                dest.y = en->actor.pos_2.y;
-
-                // recalculate distance based on height
-                float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
-
-                if (distance < 1) {
-                    // We are on the destination, reset it to exact
-                    // so we can continue the journey!
-                    // Stop moving horizontally
-                    en->actor.xz_speed = 0;
-                    en->actor.vel_1.y = 0;
-                    en->actor.gravity = 0;  
-                    en->actor.pos_2 = en->next_dest;
-                }
-                else {
-                    // Drop like a rock!
-                    en->actor.gravity = -5;
-                }
-            }
-        }
-        float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
-        external_func_8002D8E0(&en->actor);
-
-        if(diff < en->actor.xz_speed)
-        {
-            en->current_node += 1;
-        }
-        if (en->current_node == en->num_nodes - 1)
-        {
-            en->current_node = 0;
-        }
-        en->count += 1;
+        en->current_node += 1;
     }
-
-
+    if (en->current_node == en->num_nodes - 1)
+    {
+        en->current_node = 0;
+    }
+    
+    //external_func_8002D8E0(&en->actor);
     actor_collider_cylinder_update(&en->actor, &en->Collision);
     actor_collision_check_set_ac(gl,AADDR(gl, 0x011E60), &en->Collision);
 	actor_collision_check_set_at(gl,AADDR(gl, 0x011E60), &en->Collision);
     actor_collision_check_set_ot(gl, (u32*)(AADDR(gl,0x11e60)), &en->Collision);
-
 }
  
 static void draw(entity_t *en, z64_global_t *gl)
