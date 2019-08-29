@@ -18,7 +18,6 @@ typedef struct {
     z64_skelanime_t skelanime;
     uint32_t path_id;
     vec3f_t next_dest;
-    int y_vel;
     int count;
     int current_node;
     u32* pathlist;
@@ -75,7 +74,7 @@ static void init(entity_t *en, z64_global_t *gl)
     en->actor.health = TOAD_HEALTH;
     actor_init_shadow(&(en->actor).rot_2, 0, &ACTOR_SHADOW_DRAWFUNC_CIRCLE, 50.0f);
  
-    //en->actor.gravity = -0.5f;
+    en->actor.gravity = -0.5f;
 
     // gets the list of paths and set first destination
     en->last_diff = 999999.0f;
@@ -85,8 +84,7 @@ static void init(entity_t *en, z64_global_t *gl)
     en->num_nodes = get_number_of_nodes_from_path(get_path_address(en->pathlist, en->path_id));
     get_next_dest(en, gl);
    
-    en->actor.vel_1.x = (math_sins(en->actor.xz_dir) * en->actor.xz_speed);
-    en->actor.vel_1.z = (math_coss(en->actor.xz_dir) * en->actor.xz_speed);
+    en->actor.vel_1.y = 5;
     en->actor.mass = 0xF0;
     en->count = 0;
     //skelanime_init_mtx(gl, &en->skelanime, SKL_DEFAULT, ANIM_TOADACTION, 0, 0, 0);
@@ -112,27 +110,75 @@ static void play(entity_t *en, z64_global_t *gl)
         en->actor.rot_2.y = en->actor.xz_dir;
 
         //Sets movement speed
-        en->actor.xz_speed = 4;
+        
 
         //Function to move in direction (0x32) at set velocity (0x68)
         //a0 = pointer to start address of actor instance
-        //external_func_8002D8E0(&en->actor);
-            
+        
 
-        if( ( en->actor.bgcheck_flags & 0xB)|| (en->Collision.body.flags_2 & 2) )
-        {
-            en->actor.vel_1.y = 5;
+                // if on ground, jump
+        if((en->actor.bgcheck_flags & 0xB)|| (en->Collision.body.flags_2 & 2)) {
             sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
+
+            // get destination without height accounted
+            vec3f_t dest = en->next_dest;
+            dest.y = en->actor.pos_2.y;
+
+            // calculate distance and speed
+            float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
+            float time = 20 * 2; // 2 seconds;
+            float hSpeed = (distance / time);
+
+            if (distance < 1) {
+                // We are on the destination, reset it to exact
+                // so we can continue the journey!
+                // Stop moving horizontally
+                en->actor.xz_speed = 0;
+                en->actor.vel_1.y = 0;
+                en->actor.gravity = 0;  
+                en->actor.pos_2 = en->next_dest;
+            }
+            else {
+                // We got places to go, calculate the journey!
+                en->actor.xz_speed = hSpeed;
+                en->actor.vel_1.y = hSpeed;
+                en->actor.gravity = -(hSpeed) / time;              
+            }
         }
         else
         {
-            sound_play_actor(&en->actor, NA_SE_IT_BOMB_EXPLOSION);
+            // get destination without height accounted
+            vec3f_t dest = en->next_dest;
+            dest.y = en->actor.pos_2.y;
+
+            // calculate distance and speed
+            float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
+
+            if (distance < 1) {
+                // recalculate destination based on height
+                dest = en->actor.pos_2;
+                dest.y = en->actor.pos_2.y;
+
+                // recalculate distance based on height
+                float distance = ABS(math_vec3f_distance(&dest, &en->actor.pos_2));
+
+                if (distance < 1) {
+                    // We are on the destination, reset it to exact
+                    // so we can continue the journey!
+                    // Stop moving horizontally
+                    en->actor.xz_speed = 0;
+                    en->actor.vel_1.y = 0;
+                    en->actor.gravity = 0;  
+                    en->actor.pos_2 = en->next_dest;
+                }
+                else {
+                    // Drop like a rock!
+                    en->actor.gravity = -5;
+                }
+            }
         }
-
-        external_func_8002D8E0(&en->actor);
-        
         float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
-
+        external_func_8002D8E0(&en->actor);
 
         if(diff < en->actor.xz_speed)
         {
@@ -142,7 +188,7 @@ static void play(entity_t *en, z64_global_t *gl)
         {
             en->current_node = 0;
         }
-        
+        en->count += 1;
     }
 
 
