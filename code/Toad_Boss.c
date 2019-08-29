@@ -75,8 +75,7 @@ static void init(entity_t *en, z64_global_t *gl)
     en->actor.health = TOAD_HEALTH;
     actor_init_shadow(&(en->actor).rot_2, 0, &ACTOR_SHADOW_DRAWFUNC_CIRCLE, 50.0f);
  
-    en->actor.gravity = -0.5f;
-	en->actor.min_vel_y = 0;
+    //en->actor.gravity = -0.5f;
 
     // gets the list of paths and set first destination
     en->last_diff = 999999.0f;
@@ -100,15 +99,6 @@ static void play(entity_t *en, z64_global_t *gl)
     uint32_t *l = (uint32_t *)GLOBAL_SCENE_FRAME;
     actor_collider_cylinder_update(&en->actor, &en->Collision);
 	external_func_8002E4B4(gl, &en->actor, 50.0f, 10.0f, 100.0f, 5); //extern void external_func_8002E4B4(z64_global_t *global, z64_actor_t *actor, f32 below, f32 radius, f32 above, u32 flags);
-    
-    if( ( en->actor.bgcheck_flags & 0xB)|| (en->Collision.body.flags_2 & 2) )
-    {
-        en->touching_ground = true;
-    }
-    else
-    {
-        en->touching_ground = false;
-    }
 
     if (en->current_node != en->num_nodes - 1)
     {
@@ -126,21 +116,21 @@ static void play(entity_t *en, z64_global_t *gl)
 
         //Function to move in direction (0x32) at set velocity (0x68)
         //a0 = pointer to start address of actor instance
-        external_func_8002D8E0(&en->actor);
+        //external_func_8002D8E0(&en->actor);
             
 
-        if(en->touching_ground == true)
+        if( ( en->actor.bgcheck_flags & 0xB)|| (en->Collision.body.flags_2 & 2) )
         {
             en->actor.vel_1.y = 5;
             sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
         }
-
-        if(en->touching_ground == false)
-        {  
-            en->actor.vel_1.y = 0; //Sets Velocety to 0
-            sound_play_actor(&en->actor, NA_SE_EV_LIGHTNING);
+        else
+        {
+            sound_play_actor(&en->actor, NA_SE_IT_BOMB_EXPLOSION);
         }
 
+        external_func_8002D8E0(&en->actor);
+        
         float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
 
 
