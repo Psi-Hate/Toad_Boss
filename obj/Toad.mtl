@@ -1,5 +1,5 @@
-# Blender MTL File: 'Toad.blend'
-# Material Count: 1
+# Blender MTL File: 'None'
+# Material Count: 3
 
 newmtl None
 Ns 0
@@ -8,6 +8,24 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
-map_Kd D:\OoT_Modding\Code\Toad_Boss\textures\ZELDA_MAJORAS_MASK1A583C0821D9FC5C52_ciByRGBA.png
+map_Kd D:\OoT_Modding\Code\Toad_Boss\blend\textures\toad.png
+
+newmtl None_0600F038.tga
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+map_Kd D:\OoT_Modding\Code\Toad_Boss\blend\textures\0600F038.tga
 uprop c
 vprop c
+
+newmtl None_mouth.png
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+map_Kd D:\OoT_Modding\Code\Toad_Boss\blend\textures\mouth.png

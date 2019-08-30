@@ -1,12 +1,13 @@
 #include <z64ovl/oot/debug.h>
 #include<z64ovl/oot/helpers.h>
 #include <z64ovl/oot/sfx.h>
-  
+
+
 #define TOAD_HEALTH   3  
 #define ACT_ID 0x0082
 #define OBJ_ID 0x0086
 #define GLOBAL_SCENE_FRAME 0x802120BC
- 
+
 /* Display Lists * * * */
      #define   DL_TOAD     0x060027B8
 
@@ -28,7 +29,12 @@ typedef struct {
     vec3f_t destPos;
     float jumpTime;
     bool isJumping;
-   
+    int jumpStance;
+    int fightStance;
+    int stance;
+    int randnum;
+
+
 } entity_t;
  
 const z64_collider_cylinder_init_t Collision =
@@ -58,7 +64,7 @@ const z64_collider_cylinder_init_t Collision =
         , .z = 0
     }
 };
- 
+
 void get_next_dest(entity_t *en, z64_global_t *gl)
 {
     //sets the node data within a path to dest_pos
@@ -72,7 +78,7 @@ static void init(entity_t *en, z64_global_t *gl)
 {
     //adds  gravity
 	en->actor.pos_2.y -=10;
-    
+
     en->isJumping = false;
     actor_collider_cylinder_init(gl, &en->Collision, &en->actor, &Collision);
     actor_set_scale(&en->actor, 0.01f);
@@ -90,15 +96,35 @@ static void init(entity_t *en, z64_global_t *gl)
     en->pathlist = get_path_list_addr(gl);
     en->num_nodes = get_number_of_nodes_from_path(get_path_address(en->pathlist, en->path_id));
     get_next_dest(en, gl);
-   
     en->actor.mass = 0xF0;
     en->count = 0;
+    en->stance = en->jumpStance;
     //skelanime_init_mtx(gl, &en->skelanime, SKL_DEFAULT, ANIM_TOADACTION, 0, 0, 0);
 
 }
 
+int check_stance_jump(entity_t *en, z64_global_t *gl)
+{
+    if(en->count >= 80)
+    {
+        en->count = 0;
+    }
+    en->count += 1;
+}
+
+int check_stance_fight(entity_t *en, z64_global_t *gl)
+{
+    if(en->count >= 80)
+    {
+        en->stance = en->fightStance;
+        en->count = 0;
+    }
+    en->count += 1;
+}
+
 void HandleJump(entity_t *en, z64_global_t *gl) 
 {
+
     if (en->isJumping) {
         en->jumpTime += (1.0f / 20.0f);
         float delta = en->jumpTime;
@@ -144,10 +170,11 @@ void HandleJump(entity_t *en, z64_global_t *gl)
             en->destPos = en->next_dest;
             en->isJumping = true;
             sound_play_actor(&en->actor, NA_SE_IT_HAND_CLAP);
+            
         }
-        else {
+        else 
+        {
             en->actor.xz_speed = 0;
-            sound_play_actor(&en->actor, NA_SE_EV_EXPLOSION);
             en->actor.gravity = -5;
             en->actor.pos_2.y = 5;
             external_func_8002D8E0(&en->actor);
@@ -155,14 +182,30 @@ void HandleJump(entity_t *en, z64_global_t *gl)
     }
 }
 
+void HandleFight(entity_t *en, z64_global_t *gl) 
+{
+    check_stance_fight(en, gl);
+    sound_play_actor(&en->actor, NA_SE_EV_EXPLOSION);
+}
+
+
 static void play(entity_t *en, z64_global_t *gl)
 {
 
-    uint32_t *l = (uint32_t *)GLOBAL_SCENE_FRAME;
     actor_collider_cylinder_update(&en->actor, &en->Collision);
 	external_func_8002E4B4(gl, &en->actor, 50.0f, 10.0f, 100.0f, 5); //extern void external_func_8002E4B4(z64_global_t *global, z64_actor_t *actor, f32 below, f32 radius, f32 above, u32 flags);
 
-    HandleJump(en,gl);
+    if (en->stance == en->jumpStance) 
+    {
+        HandleJump(en, gl);
+        
+    }
+    if (en->stance == en->fightStance)
+    {
+        HandleFight(en, gl);
+    }
+    
+    //HandleJump(en,gl);
 
     float diff = ABS(math_vec3f_distance(&en->next_dest, &en->actor.pos_2));
         
@@ -175,7 +218,7 @@ static void play(entity_t *en, z64_global_t *gl)
     {
         en->current_node = 0;
     }
-    
+
     //external_func_8002D8E0(&en->actor);
     actor_collider_cylinder_update(&en->actor, &en->Collision);
     actor_collision_check_set_ac(gl,AADDR(gl, 0x011E60), &en->Collision);
